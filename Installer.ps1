@@ -21,6 +21,8 @@
 	Switch for noninteractive installation. No prompts to choose versions or configurations will appear when specified, and one of the above parameters must also be specified.
 	.PARAMETER InstallParentPath
 	Path to VeeamNotify destination directory. Default: 'C:\VeeamScripts'
+	.PARAMETER ConfigureOnly
+	Configure an existing VeeamNotify installation without downloading or reinstalling it.
 	.INPUTS
 	None
 	.OUTPUTS
@@ -33,6 +35,8 @@
 	PS> Installer.ps1 -Version 'v1.0' -NonInteractive
 	.EXAMPLE
 	PS> Installer.ps1 -PullRequest '123'
+	.EXAMPLE
+	PS> Installer.ps1 -ConfigureOnly
 	.NOTES
 	Authors: tigattack, philenst
 	.LINK
@@ -48,6 +52,7 @@ param(
 	[Parameter(ParameterSetName = 'Release', Position = 0)]
 	[Parameter(ParameterSetName = 'Branch', Position = 0)]
 	[Parameter(ParameterSetName = 'PullRequest', Position = 0)]
+	[Parameter(ParameterSetName = 'ConfigureOnly', Position = 0)]
 	[String]$InstallParentPath = 'C:\VeeamScripts',
 
 	[Parameter(ParameterSetName = 'Version', Position = 1, Mandatory)]
@@ -70,7 +75,10 @@ param(
 	[Parameter(ParameterSetName = 'Release', Position = 2)]
 	[Parameter(ParameterSetName = 'Branch', Position = 2)]
 	[Parameter(ParameterSetName = 'PullRequest', Position = 2)]
-	[Switch]$NonInteractive
+	[Switch]$NonInteractive,
+
+	[Parameter(ParameterSetName = 'ConfigureOnly')]
+	[Switch]$ConfigureOnly
 )
 
 #region Functions
@@ -549,6 +557,25 @@ function Set-ProjectConfiguration {
 	return $configPath
 }
 
+function Get-InstalledVersion {
+	[CmdletBinding()]
+	[OutputType([string])]
+	param (
+		[Parameter(Mandatory)]
+		[string]$Project,
+
+		[Parameter(Mandatory)]
+		[string]$InstallParentPath
+	)
+
+	$versionFile = Join-Path -Path $InstallParentPath -ChildPath "$Project\resources\version.txt"
+	if (-not (Test-Path $versionFile)) {
+		return $null
+	}
+
+	return (Get-Content -Raw $versionFile).Trim()
+}
+
 function Initialize-ServiceConfig {
 	[CmdletBinding()]
 	[OutputType([PSCustomObject])]
@@ -793,6 +820,26 @@ Write-Host -ForegroundColor Green @'
 #                                     #
 #######################################
 '@
+
+# Handle an existing installation before the install-only prerequisites check.
+$installedVersion = Get-InstalledVersion -Project $project -InstallParentPath $InstallParentPath
+if ($installedVersion) {
+	if ($ConfigureOnly -or (-not $NonInteractive -and (YesNoPrompt -Title 'Existing Installation' -Description "$project $installedVersion is already installed. Run configuration only?"))) {
+		Write-Host "`nConfiguring existing $project $installedVersion installation...`n"
+		Set-ProjectConfiguration -Project $project -InstallParentPath $InstallParentPath | Out-Null
+		Write-Host -ForegroundColor Green "`nConfiguration complete!`n"
+		exit 0
+	}
+
+	Write-Host -ForegroundColor Yellow "`n$project $installedVersion is already installed. This script cannot update an existing installation."
+	Write-Host -ForegroundColor Yellow "Run '.\Installer.ps1 -ConfigureOnly' to configure it, or rename/delete the existing installation to reinstall.`n`n"
+	exit 1
+}
+
+if ($ConfigureOnly) {
+	Write-Host -ForegroundColor Yellow "`nNo existing installation found at $InstallParentPath\$project. Install it first, then run -ConfigureOnly.`n"
+	exit 1
+}
 
 # Validate prerequisites
 $validPrereqs = Test-InstallationPrerequisites -Project $project -InstallPath $InstallParentPath -Version $Version -Latest $Latest

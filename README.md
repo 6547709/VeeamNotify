@@ -53,11 +53,12 @@ Run PowerShell as Administrator on the Veeam server.
 
 1. Download the latest `VeeamNotify-vX.Y.Z.zip` from [Releases](https://github.com/6547709/VeeamNotify/releases).
 2. Extract it so the project lives at `C:\VeeamScripts\VeeamNotify`.
-3. Run the installer:
+3. Configure the extracted copy:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-C:\VeeamScripts\VeeamNotify\Installer.ps1
+Get-ChildItem C:\VeeamScripts\VeeamNotify -Recurse | Unblock-File
+C:\VeeamScripts\VeeamNotify\Installer.ps1 -ConfigureOnly
 ```
 
 **Option 2: install from source**
@@ -65,10 +66,12 @@ C:\VeeamScripts\VeeamNotify\Installer.ps1
 ```powershell
 git clone https://github.com/6547709/VeeamNotify.git C:\VeeamScripts\VeeamNotify
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-C:\VeeamScripts\VeeamNotify\Installer.ps1
+C:\VeeamScripts\VeeamNotify\Installer.ps1 -ConfigureOnly
 ```
 
 The installer prompts for the notification service and webhook, writes `config\conf.json`, and can optionally configure supported Veeam jobs to call `Bootstrap.ps1` after each session.
+
+**If `api.github.com` is unreachable** (restricted network/proxy), the installer's download modes cannot query releases. Download the release zip manually, extract it to `C:\VeeamScripts\VeeamNotify`, unblock the files, then run `Installer.ps1 -ConfigureOnly` as shown above. `-ConfigureOnly` never contacts GitHub; it only configures an existing copy.
 
 ## Configuration
 
