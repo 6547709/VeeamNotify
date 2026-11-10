@@ -3,6 +3,7 @@
 class NotificationResult {
 	[ValidateNotNullOrEmpty()][bool]$Success
 	[string]$Message
+	[object]$Response
 	[hashtable]$Detail
 }
 
@@ -34,15 +35,16 @@ function Send-Payload {
 		}
 
 		if ($Method -eq 'Post' -and $Payload) {
-			$postParams.Body        = $Payload | ConvertTo-Json -Depth 100 -Compress
-			$postParams.ContentType = 'application/json'
+			$postParams.Body        = [System.Text.Encoding]::UTF8.GetBytes(($Payload | ConvertTo-Json -Depth 100 -Compress))
+			$postParams.ContentType = 'application/json; charset=utf-8'
 		}
 
 		try {
 			$request = Invoke-RestMethod @postParams
 			return [NotificationResult]@{
-				Success = $true
-				Message = $request
+				Success  = $true
+				Message  = $request
+				Response = $request
 			}
 		}
 		catch {
