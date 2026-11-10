@@ -372,6 +372,12 @@ try {
 				'http' {
 					$result = Send-HttpNotification -Parameters $payloadParams -ServiceConfig $service.Value
 				}
+				'wecom' {
+					$result = Send-WebhookNotification -Service 'WeCom' -Parameters $payloadParams -ServiceConfig $service.Value
+				}
+				'feishu' {
+					$result = Send-WebhookNotification -Service 'Feishu' -Parameters $payloadParams -ServiceConfig $service.Value
+				}
 				default {
 					Write-LogMessage -Tag 'WARN' -Message "Skipping unknown service: $serviceName"
 				}

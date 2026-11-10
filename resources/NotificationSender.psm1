@@ -66,7 +66,7 @@ function Send-WebhookNotification {
 	[OutputType([NotificationResult])]
 	param (
 		[Parameter(Mandatory)]
-		[ValidateSet('Discord', 'Slack', 'Teams')]
+		[ValidateSet('Discord', 'Slack', 'Teams', 'WeCom', 'Feishu')]
 		[string]$Service,
 		[Parameter(Mandatory)]
 		[System.Collections.Specialized.OrderedDictionary]$Parameters,
@@ -84,9 +84,9 @@ function Send-WebhookNotification {
 		}
 	}
 
-	# Check if user should be mentioned
+	# Check if user should be mentioned (WeCom/Feishu do not support mentions in this design)
 	try {
-		if ($params.Mention) {
+		if ($params.Mention -and $Service -in 'Discord', 'Slack', 'Teams') {
 			$params.UserId = $ServiceConfig.user_id
 
 			# Set username if exists (Teams specific)
@@ -109,6 +109,35 @@ function Send-WebhookNotification {
 	# Create payload and send notification
 	try {
 		$response = New-Payload -Service $Service -Parameters $params | Send-Payload -Uri $ServiceConfig.webhook
+
+		# Check provider-specific error codes; HTTP 200 alone does not mean success.
+		if ($response.Success -and $Service -in 'WeCom', 'Feishu') {
+			if ($Service -eq 'WeCom') {
+				$code = $response.Response.errcode
+				$providerMessage = $response.Response.errmsg
+			}
+			else {
+				$code = $response.Response.code
+				$providerMessage = $response.Response.msg
+				if ($null -eq $code) {
+					$code = $response.Response.StatusCode
+					$providerMessage = $response.Response.StatusMessage
+				}
+			}
+
+			if ($null -ne $code -and "$code" -ne '0') {
+				return [NotificationResult]@{
+					Success = $false
+					Message = "$Service returned error code $code"
+					Detail  = @{
+						Service = $Service
+						Code    = $code
+						Message = $providerMessage
+					}
+				}
+			}
+		}
+
 		return $response
 	}
 	catch {
