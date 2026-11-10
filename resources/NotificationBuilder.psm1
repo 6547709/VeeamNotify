@@ -767,11 +767,11 @@ function New-WeComPayload {
 			},
 			[PSCustomObject]@{
 				keyname = 'Dedup Ratio'
-				value   = $DedupRatio
+				value   = "$DedupRatio"
 			},
 			[PSCustomObject]@{
 				keyname = 'Compression Ratio'
-				value   = $CompressRatio
+				value   = "$CompressRatio"
 			},
 			[PSCustomObject]@{
 				keyname = 'Processing Rate'
@@ -834,6 +834,11 @@ function New-FeishuPayload {
 		'PSReviewUnusedParameter',
 		'Mention',
 		Justification = 'Mention is part of standard notification parameters'
+	)]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'ThumbnailUrl',
+		Justification = 'ThumbnailUrl is part of standard notification parameters'
 	)]
 	param (
 		[string]$JobName,

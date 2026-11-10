@@ -91,6 +91,15 @@ Describe 'New-WeComPayload' {
 		$p = New-WeComPayload @common -JobType 'VM Backup'
 		{ $p | ConvertTo-Json -Depth 100 -Compress } | Should -Not -Throw
 	}
+
+	It 'serialises numeric metric values as strings' {
+		$rows = (New-WeComPayload @common -JobType 'VM Backup').template_card.horizontal_content_list
+		$dedup = $rows | Where-Object { $_.keyname -eq 'Dedup Ratio' }
+		$compress = $rows | Where-Object { $_.keyname -eq 'Compression Ratio' }
+		$dedup.value | Should -BeOfType [string]
+		$compress.value | Should -BeOfType [string]
+		$dedup.value | Should -Be '2'
+	}
 }
 
 Describe 'New-FeishuPayload' {

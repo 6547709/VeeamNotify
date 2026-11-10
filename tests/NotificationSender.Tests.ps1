@@ -24,7 +24,9 @@ Describe 'Send-Payload transport' {
 		}
 
 		Should -Invoke Invoke-RestMethod -ModuleName NotificationSender -ParameterFilter {
-			$Body -is [byte[]] -and $ContentType -eq 'application/json; charset=utf-8'
+			$Body -is [byte[]] -and
+			$ContentType -eq 'application/json; charset=utf-8' -and
+			([System.Text.Encoding]::UTF8.GetString($Body) -match '备份任务')
 		}
 	}
 }
@@ -147,5 +149,94 @@ Describe 'Send-WebhookNotification provider responses' {
 
 		$result.Success | Should -BeFalse
 		$result.Message | Should -Match 'unconfigured'
+	}
+
+	It 'ignores Mention for WeCom even when true' {
+		Mock Invoke-RestMethod -ModuleName NotificationSender {
+			[PSCustomObject]@{ errcode = 0; errmsg = 'ok' }
+		}
+
+		$mentionParams = [ordered]@{}
+		foreach ($key in $script:params.Keys) {
+			$mentionParams[$key] = $script:params[$key]
+		}
+		$mentionParams.Mention = $true
+
+		$result = InModuleScope NotificationSender -Parameters @{
+			Parameters    = $mentionParams
+			ServiceConfig = $script:serviceConfig
+		} {
+			Send-WebhookNotification -Service WeCom -Parameters $Parameters -ServiceConfig $ServiceConfig
+		}
+
+		$result.Success | Should -BeTrue
+	}
+
+	It 'accepts the Agent/Tape parameter set without VM-only keys for WeCom' {
+		Mock Invoke-RestMethod -ModuleName NotificationSender {
+			[PSCustomObject]@{ errcode = 0; errmsg = 'ok' }
+		}
+
+		$agentParams = [ordered]@{
+			JobName         = 'Agent Backup'
+			JobType         = 'Windows Agent Backup'
+			Status          = 'Success'
+			ProcessedSize   = '900 GB'
+			TransferSize    = '300 GB'
+			Speed           = '120 MB/s'
+			Bottleneck      = 'Source'
+			Duration        = '1h 2m 3s'
+			StartTime       = Get-Date '2026-11-10 01:00'
+			EndTime         = Get-Date '2026-11-10 02:02'
+			Mention         = $false
+			ThumbnailUrl    = 'https://example.com/logo.png'
+			FooterMessage   = 'VeeamNotify test'
+			NotifyUpdate    = $false
+			UpdateAvailable = $false
+			LatestVersion   = ''
+		}
+
+		$result = InModuleScope NotificationSender -Parameters @{
+			Parameters    = $agentParams
+			ServiceConfig = $script:serviceConfig
+		} {
+			Send-WebhookNotification -Service WeCom -Parameters $Parameters -ServiceConfig $ServiceConfig
+		}
+
+		$result.Success | Should -BeTrue
+	}
+
+	It 'accepts the Agent/Tape parameter set without VM-only keys for Feishu' {
+		Mock Invoke-RestMethod -ModuleName NotificationSender {
+			[PSCustomObject]@{ code = 0; msg = 'success' }
+		}
+
+		$agentParams = [ordered]@{
+			JobName         = 'Agent Backup'
+			JobType         = 'Windows Agent Backup'
+			Status          = 'Success'
+			ProcessedSize   = '900 GB'
+			TransferSize    = '300 GB'
+			Speed           = '120 MB/s'
+			Bottleneck      = 'Source'
+			Duration        = '1h 2m 3s'
+			StartTime       = Get-Date '2026-11-10 01:00'
+			EndTime         = Get-Date '2026-11-10 02:02'
+			Mention         = $false
+			ThumbnailUrl    = 'https://example.com/logo.png'
+			FooterMessage   = 'VeeamNotify test'
+			NotifyUpdate    = $false
+			UpdateAvailable = $false
+			LatestVersion   = ''
+		}
+
+		$result = InModuleScope NotificationSender -Parameters @{
+			Parameters    = $agentParams
+			ServiceConfig = $script:serviceConfig
+		} {
+			Send-WebhookNotification -Service Feishu -Parameters $Parameters -ServiceConfig $ServiceConfig
+		}
+
+		$result.Success | Should -BeTrue
 	}
 }

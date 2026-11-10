@@ -549,6 +549,28 @@ function Set-ProjectConfiguration {
 	return $configPath
 }
 
+function Initialize-ServiceConfig {
+	[CmdletBinding()]
+	[OutputType([PSCustomObject])]
+	param (
+		[Parameter(Mandatory)]
+		[PSCustomObject]$Config,
+
+		[Parameter(Mandatory)]
+		[string]$Service
+	)
+
+	# Existing configs created before this service was added won't have the property.
+	if (-not ($Config.services.PSObject.Properties.Name -contains $Service)) {
+		$Config.services | Add-Member -NotePropertyName $Service -NotePropertyValue ([PSCustomObject]@{
+				enabled = $false
+				webhook = ''
+			}) -Force
+	}
+
+	return $Config
+}
+
 function Set-NotificationService {
 	[CmdletBinding()]
 	[OutputType([object[]])]
@@ -557,14 +579,18 @@ function Set-NotificationService {
 		[PSCustomObject]$Config
 	)
 
+	# Ensure newer services exist in configs created before they were added.
+	$Config = Initialize-ServiceConfig -Config $Config -Service 'wecom'
+	$Config = Initialize-ServiceConfig -Config $Config -Service 'feishu'
+
 	# Prompt user with config options
 	$servicePrompt_discord = New-Object System.Management.Automation.Host.ChoiceDescription '&Discord', 'Send notifications to Discord.'
 	$servicePrompt_slack = New-Object System.Management.Automation.Host.ChoiceDescription '&Slack', 'Send notifications to Slack.'
 	$servicePrompt_teams = New-Object System.Management.Automation.Host.ChoiceDescription '&Microsoft Teams', 'Send notifications to Microsoft Teams.'
 	$servicePrompt_telegram = New-Object System.Management.Automation.Host.ChoiceDescription '&Telegram', 'Send notifications to Telegram.'
 	$servicePrompt_http = New-Object System.Management.Automation.Host.ChoiceDescription '&HTTP', 'Send job data to HTTP endpoint.'
-	$servicePrompt_wecom = New-Object System.Management.Automation.Host.ChoiceDescription '&WeCom', 'Send notifications to WeCom (企业微信).'
-	$servicePrompt_feishu = New-Object System.Management.Automation.Host.ChoiceDescription '&Feishu', 'Send notifications to Feishu (飞书).'
+	$servicePrompt_wecom = New-Object System.Management.Automation.Host.ChoiceDescription '&WeCom', 'Send notifications to WeCom.'
+	$servicePrompt_feishu = New-Object System.Management.Automation.Host.ChoiceDescription '&Feishu', 'Send notifications to Feishu.'
 	$servicePrompt_result = $host.UI.PromptForChoice(
 		'Notification Service',
 		'Which service do you wish to send notifications to?',
