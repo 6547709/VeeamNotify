@@ -1,0 +1,55 @@
+name: Build release asset
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build or update the release for (e.g. v2.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Verify version matches tag
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d '[:space:]' < resources/version.txt)
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "::error::resources/version.txt is '$VERSION' but the tag is '$TAG'"
+            exit 1
+          fi
+
+      - name: Build release zip
+        run: |
+          set -euo pipefail
+          git archive --format=zip --prefix="VeeamNotify-${TAG}/" -o "VeeamNotify-${TAG}.zip" HEAD
+          # Keep internal planning docs out of the distributed archive.
+          zip -qd "VeeamNotify-${TAG}.zip" "VeeamNotify-${TAG}/docs/*" 2>/dev/null || true
+          unzip -l "VeeamNotify-${TAG}.zip" | head -10
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "VeeamNotify-${TAG}.zip" --clobber
+          else
+            gh release create "$TAG" "VeeamNotify-${TAG}.zip" --title "$TAG" --generate-notes
+          fi
