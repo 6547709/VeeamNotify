@@ -1,0 +1,196 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "VeeamNotify Configuration Schema",
+    "type": "object",
+    "properties": {
+        "services": {
+            "type": "object",
+            "properties": {
+                "discord": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "webhook": {
+                            "type": "string"
+                        },
+                        "user_id": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "enabled",
+                        "webhook"
+                    ]
+                },
+                "slack": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "webhook": {
+                            "type": "string"
+                        },
+                        "user_id": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "enabled",
+                        "webhook"
+                    ]
+                },
+                "teams": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "webhook": {
+                            "type": "string"
+                        },
+                        "user_id": {
+                            "type": "string"
+                        },
+                        "display_name": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "enabled",
+                        "webhook"
+                    ],
+                    "not": {
+                        "required": [
+                            "user_name",
+                            "display_name"
+                        ]
+                    }
+                },
+                "telegram": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "bot_token": {
+                            "type": "string"
+                        },
+                        "chat_id": {
+                            "type": "string"
+                        },
+                        "user_name": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "enabled",
+                        "bot_token",
+                        "chat_id"
+                    ]
+                },
+                "http": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "url": {
+                            "type": "string"
+                        },
+                        "method": {
+                            "type": "string",
+                            "enum": [
+                                "GET",
+                                "POST"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "enabled",
+                        "url",
+                        "method"
+                    ]
+                }
+            },
+            "required": [
+                "discord",
+                "slack",
+                "teams",
+                "telegram",
+                "http"
+            ]
+        },
+        "mentions": {
+            "type": "object",
+            "properties": {
+                "on_failure": {
+                    "type": "boolean"
+                },
+                "on_warning": {
+                    "type": "boolean"
+                },
+                "on_success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "notifications": {
+            "type": "object",
+            "properties": {
+                "on_success": {
+                    "type": "boolean"
+                },
+                "on_failure": {
+                    "type": "boolean"
+                },
+                "on_warning": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "logging": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "max_age_days": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "enabled",
+                "level",
+                "max_age_days"
+            ]
+        },
+        "update": {
+            "type": "object",
+            "properties": {
+                "notify": {
+                    "type": "boolean"
+                },
+                "auto_update": {
+                    "type": "boolean"
+                },
+                "auto_update_comment": {
+                    "type": "string"
+                }
+            }
+        },
+        "thumbnail": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "services",
+        "logging",
+        "thumbnail"
+    ]
+}

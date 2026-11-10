@@ -1,0 +1,8 @@
+.DS_Store
+notes.md
+ExampleData
+/Test-*
+log/*.log
+config/conf.json
+update-notification.marker
+PesterResults.xml
