@@ -92,3 +92,62 @@ Describe 'New-WeComPayload' {
 		{ $p | ConvertTo-Json -Depth 100 -Compress } | Should -Not -Throw
 	}
 }
+
+Describe 'New-FeishuPayload' {
+	It 'returns a Card 2.0 interactive message' {
+		$p = New-FeishuPayload @common -JobType 'VM Backup'
+		$p.msg_type | Should -Be 'interactive'
+		$p.card.schema | Should -Be '2.0'
+		$p.card.header.title.content | Should -Be 'Daily VM Backup'
+	}
+
+	It 'maps statuses to card header templates' {
+		(New-FeishuPayload @common -JobType 'VM Backup' -Status 'Success').card.header.template | Should -Be 'green'
+		(New-FeishuPayload @common -JobType 'VM Backup' -Status 'Warning').card.header.template | Should -Be 'orange'
+		(New-FeishuPayload @common -JobType 'VM Backup' -Status 'Failed').card.header.template | Should -Be 'red'
+		(New-FeishuPayload @common -JobType 'VM Backup' -Status 'None').card.header.template | Should -Be 'grey'
+	}
+
+	It 'splits the nine VM fields across two weighted columns' {
+		$elements = (New-FeishuPayload @common -JobType 'VM Backup').card.body.elements
+		$columns = $elements | Where-Object { $_.tag -eq 'column_set' }
+		$columns.columns.Count | Should -Be 2
+		$left = $columns.columns[0].elements[0].content
+		$right = $columns.columns[1].elements[0].content
+		$left | Should -Match ([regex]::Escape('**Backup Size**'))
+		$left | Should -Match ([regex]::Escape('**Dedup Ratio**'))
+		$left | Should -Match ([regex]::Escape('**Processing Rate**'))
+		$left | Should -Match ([regex]::Escape('**Start Time**'))
+		$left | Should -Match ([regex]::Escape('**Duration**'))
+		$right | Should -Match ([regex]::Escape('**Transferred Data**'))
+		$right | Should -Match ([regex]::Escape('**Compression Ratio**'))
+		$right | Should -Match ([regex]::Escape('**Bottleneck**'))
+		$right | Should -Match ([regex]::Escape('**End Time**'))
+	}
+
+	It 'uses Processed Size for Agent and Tape jobs' {
+		$agent = (New-FeishuPayload @common -JobType 'Linux Agent Backup').card.body.elements
+		($agent | ConvertTo-Json -Depth 20) | Should -Match 'Processed Size'
+		($agent | ConvertTo-Json -Depth 20) | Should -Not -Match 'Backup Size'
+
+		$tape = (New-FeishuPayload @common -JobType 'Repo Tape Backup').card.body.elements
+		($tape | ConvertTo-Json -Depth 20) | Should -Match 'Processed Size'
+		($tape | ConvertTo-Json -Depth 20) | Should -Not -Match 'Backup Size'
+	}
+
+	It 'adds an open_url button for updates only when both flags are set' {
+		$yes = (New-FeishuPayload @common -JobType 'VM Backup' -NotifyUpdate $true -UpdateAvailable $true -LatestVersion 'v2.3.0').card.body.elements
+		$button = $yes | Where-Object { $_.tag -eq 'button' }
+		$button.behaviors[0].type | Should -Be 'open_url'
+		$button.behaviors[0].default_url | Should -Be 'https://github.com/6547709/VeeamNotify/releases/v2.3.0'
+
+		$no = (New-FeishuPayload @common -JobType 'VM Backup' -NotifyUpdate $false -UpdateAvailable $true -LatestVersion 'v2.3.0').card.body.elements
+		($no | Where-Object { $_.tag -eq 'button' }) | Should -BeNullOrEmpty
+	}
+
+	It 'includes the footer and serialises to JSON' {
+		$p = New-FeishuPayload @common -JobType 'VM Backup'
+		($p.card.body.elements | ConvertTo-Json -Depth 20) | Should -Match ([regex]::Escape($common.FooterMessage))
+		{ $p | ConvertTo-Json -Depth 100 -Compress } | Should -Not -Throw
+	}
+}

@@ -827,6 +827,180 @@ function New-WeComPayload {
 	return $payload
 }
 
+function New-FeishuPayload {
+	[CmdletBinding()]
+	[OutputType([PSCustomObject])]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'Mention',
+		Justification = 'Mention is part of standard notification parameters'
+	)]
+	param (
+		[string]$JobName,
+		[string]$JobType,
+		[string]$Status,
+		[string]$DataSize,
+		[string]$TransferSize,
+		[string]$ProcessedSize,
+		[int]$DedupRatio,
+		[int]$CompressRatio,
+		[string]$Speed,
+		[string]$Bottleneck,
+		[string]$Duration,
+		[DateTime]$StartTime,
+		[DateTime]$EndTime,
+		[boolean]$Mention,
+		[string]$ThumbnailUrl,
+		[string]$FooterMessage,
+		[boolean]$NotifyUpdate,
+		[boolean]$UpdateAvailable,
+		[string]$LatestVersion
+	)
+
+	# Set card header colour.
+	switch ($Status) {
+		'Success' { $template = 'green' }
+		'Warning' { $template = 'orange' }
+		'Failed' { $template = 'red' }
+		default { $template = 'grey' }
+	}
+
+	# Set timestamps
+	$timestampStart = $(Get-Date $StartTime -UFormat '%d %B %Y %R').ToString()
+	$timestampEnd = $(Get-Date $EndTime -UFormat '%d %B %Y %R').ToString()
+
+	# Build field list.
+	if ($JobType.EndsWith('Agent Backup') -or $JobType.EndsWith('Tape Backup')) {
+		$fieldPairs = @(
+			[PSCustomObject]@{ Label = 'Processed Size'; Value = $ProcessedSize },
+			[PSCustomObject]@{ Label = 'Transferred Data'; Value = $TransferSize },
+			[PSCustomObject]@{ Label = 'Processing Rate'; Value = $Speed },
+			[PSCustomObject]@{ Label = 'Bottleneck'; Value = $Bottleneck },
+			[PSCustomObject]@{ Label = 'Start Time'; Value = $timestampStart },
+			[PSCustomObject]@{ Label = 'End Time'; Value = $timestampEnd },
+			[PSCustomObject]@{ Label = 'Duration'; Value = $Duration }
+		)
+	}
+	else {
+		$fieldPairs = @(
+			[PSCustomObject]@{ Label = 'Backup Size'; Value = $DataSize },
+			[PSCustomObject]@{ Label = 'Transferred Data'; Value = $TransferSize },
+			[PSCustomObject]@{ Label = 'Dedup Ratio'; Value = $DedupRatio },
+			[PSCustomObject]@{ Label = 'Compression Ratio'; Value = $CompressRatio },
+			[PSCustomObject]@{ Label = 'Processing Rate'; Value = $Speed },
+			[PSCustomObject]@{ Label = 'Bottleneck'; Value = $Bottleneck },
+			[PSCustomObject]@{ Label = 'Start Time'; Value = $timestampStart },
+			[PSCustomObject]@{ Label = 'End Time'; Value = $timestampEnd },
+			[PSCustomObject]@{ Label = 'Duration'; Value = $Duration }
+		)
+	}
+
+	# Split fields into two columns by index parity.
+	$leftLines = @()
+	$rightLines = @()
+	for ($i = 0; $i -lt $fieldPairs.Count; $i++) {
+		$line = "**$($fieldPairs[$i].Label)**`n$($fieldPairs[$i].Value)"
+		if ($i % 2 -eq 0) {
+			$leftLines += $line
+		}
+		else {
+			$rightLines += $line
+		}
+	}
+
+	# Build body elements.
+	$elements = @(
+		[PSCustomObject]@{
+			tag     = 'markdown'
+			content = "**Session result:** $Status`n**Job type:** $JobType"
+		},
+		[PSCustomObject]@{
+			tag       = 'column_set'
+			flex_mode = 'none'
+			columns   = @(
+				[PSCustomObject]@{
+					tag      = 'column'
+					width    = 'weighted'
+					weight   = 1
+					elements = @(
+						[PSCustomObject]@{
+							tag     = 'markdown'
+							content = ($leftLines -join "`n`n")
+						}
+					)
+				},
+				[PSCustomObject]@{
+					tag      = 'column'
+					width    = 'weighted'
+					weight   = 1
+					elements = @(
+						[PSCustomObject]@{
+							tag     = 'markdown'
+							content = ($rightLines -join "`n`n")
+						}
+					)
+				}
+			)
+		},
+		[PSCustomObject]@{
+			tag = 'hr'
+		}
+	)
+
+	# Add update notice if relevant and configured to do so.
+	if ($UpdateAvailable -and $NotifyUpdate) {
+		$elements += [PSCustomObject]@{
+			tag     = 'markdown'
+			content = "**Update Available**`nA new version of VeeamNotify is available! See release $LatestVersion on GitHub."
+		}
+		$elements += [PSCustomObject]@{
+			tag       = 'button'
+			text      = [PSCustomObject]@{
+				tag     = 'plain_text'
+				content = 'Open on GitHub'
+			}
+			type      = 'default'
+			behaviors = @(
+				[PSCustomObject]@{
+					type        = 'open_url'
+					default_url = "https://github.com/6547709/VeeamNotify/releases/$LatestVersion"
+				}
+			)
+		}
+	}
+
+	# Add footer.
+	$elements += [PSCustomObject]@{
+		tag       = 'markdown'
+		text_size = 'small'
+		content   = "<font color='grey'>$FooterMessage</font>"
+	}
+
+	[PSCustomObject]$payload = @{
+		msg_type = 'interactive'
+		card     = [PSCustomObject]@{
+			schema = '2.0'
+			config = [PSCustomObject]@{
+				update_multi = $true
+			}
+			header = [PSCustomObject]@{
+				template = $template
+				title    = [PSCustomObject]@{
+					tag     = 'plain_text'
+					content = $JobName
+				}
+			}
+			body   = [PSCustomObject]@{
+				direction = 'vertical'
+				padding   = '12px'
+				elements  = $elements
+			}
+		}
+	}
+
+	return $payload
+}
+
 function New-TelegramPayload {
 	[CmdletBinding()]
 	[OutputType([PSCustomObject])]
