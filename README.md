@@ -2,6 +2,8 @@
 
 Send Veeam Backup & Replication session summary notifications to Discord, Microsoft Teams, Slack, WeCom (企业微信), and Feishu (飞书), detailing session result and statistics and optionally alerting you via mention when a job finishes in a warning or failed state.
 
+Notifications can be sent to **one or several services at the same time** — for example WeCom and Feishu together.
+
 VeeamNotify is a replacement for [VeeamDiscordNotifications](https://github.com/tigattack/VeeamDiscordNotifications) and the respective [Teams](https://github.com/tigattack/VeeamTeamsNotifications) and [Slack](https://github.com/tigattack/VeeamSlackNotifications) projects, featuring improvements across the board and support for all the aforementioned messaging services in one, easy to use project.
 
 <img src="https://github.com/6547709/VeeamNotify/blob/main/asset/discord.png?raw=true" width="30%"></img> <img src="https://github.com/6547709/VeeamNotify/blob/main/asset/slack.png?raw=true" width="30%"></img> <img src="https://github.com/6547709/VeeamNotify/blob/main/asset/teams.png?raw=true" width="30%"></img>
@@ -87,6 +89,28 @@ Minimal WeCom / Feishu configuration:
 ```
 
 Both services only need `enabled` and `webhook`. Mentions are not supported for these two services.
+
+## Sending to Multiple Services
+
+Every service with `"enabled": true` receives the same notification. There is no limit on how many services can be enabled at once.
+
+```json
+"services": {
+    "wecom":  { "enabled": true, "webhook": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." },
+    "feishu": { "enabled": true, "webhook": "https://open.feishu.cn/open-apis/bot/v2/hook/..." }
+}
+```
+
+How to configure multiple services:
+
+* Edit `config\conf.json` directly and set `"enabled": true` on each service you want, **or**
+* Run `Installer.ps1 -ConfigureOnly` once per service. The wizard does not disable services you have already enabled, so running it again for another service leaves both enabled.
+
+Behaviour:
+
+* Each service is sent independently. A failing webhook is logged with its own `errcode`/`code` and does not stop the other services.
+* `notifications.on_success` / `on_failure` / `on_warning` are global switches for whether a notification is sent at all; they do not filter by service.
+* The log contains one `Sending <Service> notification...` / result line per enabled service.
 
 ---
 
