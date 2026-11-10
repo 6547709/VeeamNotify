@@ -64,7 +64,7 @@ Describe 'Installer.ps1' {
 	}
 
 	It 'Install from specific version' {
-		$defaultVersion = 'v1.1.1'
+		$defaultVersion = 'v2.2.0'
 		Write-Host "Installing from version: $defaultVersion"
 		# Run installer
 		& $installerPath -Version $defaultVersion @installerParams

@@ -239,7 +239,7 @@ try {
 	Write-LogMessage -Tag 'INFO' -Message 'Pull latest version of script from GitHub.'
 	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 	Invoke-WebRequest -Uri `
-		https://github.com/tigattack/VeeamNotify/releases/download/$LatestVersion/VeeamNotify-$LatestVersion.zip `
+		https://github.com/6547709/VeeamNotify/releases/download/$LatestVersion/VeeamNotify-$LatestVersion.zip `
 		-OutFile $projectPath-$LatestVersion.zip
 }
 catch {

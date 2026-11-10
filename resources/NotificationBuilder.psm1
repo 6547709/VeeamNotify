@@ -208,7 +208,7 @@ function New-DiscordPayload {
 		$payload.embeds += @(
 			@{
 				title       = 'Update Available'
-				description	= "A new version of VeeamNotify is available!`n[See release **$LatestVersion** on GitHub](https://github.com/tigattack/VeeamNotify/releases/$LatestVersion)."
+				description	= "A new version of VeeamNotify is available!`n[See release **$LatestVersion** on GitHub](https://github.com/6547709/VeeamNotify/releases/$LatestVersion)."
 				color       = 3429867
 				footer      = $footerObject
 				timestamp   = $((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK'))
@@ -274,13 +274,13 @@ function New-TeamsPayload {
 	# Add embedded URL to footer message
 	$FooterMessage = $FooterMessage.Replace(
 		'VeeamNotify',
-		'[VeeamNotify](https://github.com/tigattack/VeeamNotify)'
+		'[VeeamNotify](https://github.com/6547709/VeeamNotify)'
 	)
 
 	# Add URL to update notice if relevant and configured to do so.
 	if ($UpdateAvailable -and $NotifyUpdate) {
 		# Add URL to update notice.
-		$FooterMessage += "  `n[See release **$LatestVersion** on GitHub.](https://github.com/tigattack/VeeamNotify/releases/$LatestVersion)"
+		$FooterMessage += "  `n[See release **$LatestVersion** on GitHub.](https://github.com/6547709/VeeamNotify/releases/$LatestVersion)"
 	}
 
 	# Add header information to body array
@@ -678,7 +678,7 @@ function New-SlackPayload {
 						text = 'Open on GitHub'
 					}
 					value     = 'open_github'
-					url       = "https://github.com/tigattack/VeeamNotify/releases/$LatestVersion"
+					url       = "https://github.com/6547709/VeeamNotify/releases/$LatestVersion"
 					action_id = 'button-action'
 				}
 			}
@@ -1100,7 +1100,7 @@ function New-TelegramPayload {
 
 	# Add update notice if required
 	if ($UpdateAvailable -and $NotifyUpdate) {
-		$message += "`nA new version of VeeamNotify is available! See release [*$LatestVersion* on GitHub](https://github.com/tigattack/VeeamNotify/releases/$LatestVersion)\."
+		$message += "`nA new version of VeeamNotify is available! See release [*$LatestVersion* on GitHub](https://github.com/6547709/VeeamNotify/releases/$LatestVersion)\."
 	}
 
 	# Compile message parts

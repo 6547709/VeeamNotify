@@ -130,8 +130,8 @@ function Get-GitHubReleaseInfo {
 
 	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 	try {
-		$releases = Invoke-RestMethod -Uri "https://api.github.com/repos/tigattack/$Project/releases" -Method Get
-		$branches = (Invoke-RestMethod -Uri "https://api.github.com/repos/tigattack/$Project/branches" -Method Get).name
+		$releases = Invoke-RestMethod -Uri "https://api.github.com/repos/6547709/$Project/releases" -Method Get
+		$branches = (Invoke-RestMethod -Uri "https://api.github.com/repos/6547709/$Project/branches" -Method Get).name
 
 		# Parse latest release and latest prerelease
 		$latestPrerelease = $null
@@ -175,7 +175,7 @@ function Get-GitHubPRInfo {
 	)
 
 	try {
-		$prInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/tigattack/$Project/pulls/$PullRequestId" -Method Get
+		$prInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/6547709/$Project/pulls/$PullRequestId" -Method Get
 		return $prInfo
 	}
 	catch {
@@ -345,7 +345,7 @@ function Get-InstallationSource {
 		$releaseName = $Branch
 
 		# Define download URL
-		$downloadUrl = "https://api.github.com/repos/tigattack/$Project/zipball/$Branch"
+		$downloadUrl = "https://api.github.com/repos/6547709/$Project/zipball/$Branch"
 	}
 	# Download pull request if specified
 	elseif ($PullRequest) {
@@ -382,7 +382,7 @@ function Get-InstallationSource {
 		}
 
 		# Define download URL
-		$releases = Invoke-RestMethod "https://api.github.com/repos/tigattack/$Project/releases"
+		$releases = Invoke-RestMethod "https://api.github.com/repos/6547709/$Project/releases"
 		foreach ($i in $releases) {
 			if ($i.tag_name -eq $releaseName) {
 				$downloadUrl = $i.assets[0].browser_download_url

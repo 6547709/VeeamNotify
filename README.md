@@ -1,6 +1,6 @@
 # VeeamNotify
 
-Send Veeam Backup & Replication session summary notifications to Discord, Microsoft Teams, and Slack, detailing session result and statistics and optionally alerting you via mention when a job finishes in a warning or failed state.
+Send Veeam Backup & Replication session summary notifications to Discord, Microsoft Teams, Slack, WeCom (企业微信), and Feishu (飞书), detailing session result and statistics and optionally alerting you via mention when a job finishes in a warning or failed state.
 
 VeeamNotify is a replacement for [VeeamDiscordNotifications](https://github.com/tigattack/VeeamDiscordNotifications) and the respective [Teams](https://github.com/tigattack/VeeamTeamsNotifications) and [Slack](https://github.com/tigattack/VeeamSlackNotifications) projects, featuring improvements across the board and support for all the aforementioned messaging services in one, easy to use project.
 
@@ -12,6 +12,8 @@ VeeamNotify is a replacement for [VeeamDiscordNotifications](https://github.com/
 * Slack
 * Microsoft Teams
 * Telegram
+* WeCom (企业微信群机器人, `template_card` text notice)
+* Feishu (飞书自定义机器人, Card 2.0)
 
 Please create a [feature request](https://github.com/tigattack/VeeamNotify/issues/new?assignees=tigattack&labels=enhancement&template=feature_request.yml&title=[FEAT]+New+service:+) if your preferred service isn't listed here.
 
@@ -52,6 +54,15 @@ Please see the [How to Install](https://github.com/tigattack/VeeamNotify/wiki/%F
 Default configuration can be found in `C:\VeeamScripts\VeeamNotify\config\conf.example.json`
 
 Details and examples can be found in the [Configuration Options](https://github.com/tigattack/VeeamNotify/wiki/%E2%9A%99%EF%B8%8F-Configuration-Options) wiki page.
+
+Minimal WeCom / Feishu configuration:
+
+```json
+"wecom":  { "enabled": true, "webhook": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." },
+"feishu": { "enabled": true, "webhook": "https://open.feishu.cn/open-apis/bot/v2/hook/..." }
+```
+
+Both services only need `enabled` and `webhook`. Mentions are not supported for these two services.
 
 ---
 
