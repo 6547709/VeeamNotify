@@ -526,7 +526,7 @@ function Set-ProjectConfiguration {
 	$config, $serviceType = Set-NotificationService -Config $config
 
 	# Configure mentions
-	if ($serviceType -ne 4) {
+	if ($serviceType -notin 4, 5, 6) {
 		$config = Set-MentionPreference -Config $config -ServiceType $serviceType
 	}
 	else {
@@ -563,6 +563,8 @@ function Set-NotificationService {
 	$servicePrompt_teams = New-Object System.Management.Automation.Host.ChoiceDescription '&Microsoft Teams', 'Send notifications to Microsoft Teams.'
 	$servicePrompt_telegram = New-Object System.Management.Automation.Host.ChoiceDescription '&Telegram', 'Send notifications to Telegram.'
 	$servicePrompt_http = New-Object System.Management.Automation.Host.ChoiceDescription '&HTTP', 'Send job data to HTTP endpoint.'
+	$servicePrompt_wecom = New-Object System.Management.Automation.Host.ChoiceDescription '&WeCom', 'Send notifications to WeCom (企业微信).'
+	$servicePrompt_feishu = New-Object System.Management.Automation.Host.ChoiceDescription '&Feishu', 'Send notifications to Feishu (飞书).'
 	$servicePrompt_result = $host.UI.PromptForChoice(
 		'Notification Service',
 		'Which service do you wish to send notifications to?',
@@ -571,7 +573,9 @@ function Set-NotificationService {
 			$servicePrompt_slack,
 			$servicePrompt_teams,
 			$servicePrompt_telegram,
-			$servicePrompt_http
+			$servicePrompt_http,
+			$servicePrompt_wecom,
+			$servicePrompt_feishu
 		),
 		-1
 	)
@@ -609,6 +613,14 @@ function Set-NotificationService {
 				}
 				$Config.services.http.method = 'POST'
 			}
+		}
+		5 {
+			$Config.services.wecom.enabled = $true
+			$Config.services.wecom.webhook = Read-Host -Prompt $webhookPrompt
+		}
+		6 {
+			$Config.services.feishu.enabled = $true
+			$Config.services.feishu.webhook = Read-Host -Prompt $webhookPrompt
 		}
 	}
 

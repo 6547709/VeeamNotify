@@ -26,6 +26,14 @@
             "enabled": false,
             "url": "EndpointURL",
             "method": "POST"
+        },
+        "wecom": {
+            "enabled": false,
+            "webhook": "WeComWebhook"
+        },
+        "feishu": {
+            "enabled": false,
+            "webhook": "FeishuWebhook"
         }
     },
     "mentions": {
