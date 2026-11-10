@@ -1,4 +1,4 @@
-param(
+﻿param(
 	[String]$JobId,
 	[String]$SessionId,
 	[String]$JobType,
@@ -285,11 +285,28 @@ try {
 
 
 	# Define footer message.
-	$footerMessage = "tigattack's VeeamNotify $($updateStatus.CurrentVersion)"
+	$footerMessage = "GuoqiangLi VeeamNotify $($updateStatus.CurrentVersion)"
 	switch ($updateStatus.Status) {
-		Current {$footerMessage += ' - Up to date.'}
-		Behind {$footerMessage += " - Update to $($updateStatus.LatestStable) is available!"}
-		Ahead {$footerMessage += ' - Pre-release.'}
+		Current {$footerMessage += ' - 已是最新版本。'}
+		Behind {$footerMessage += " - 有新版本 $($updateStatus.LatestStable) 可用！"}
+		Ahead {$footerMessage += ' - 预发布版本。'}
+	}
+
+	# Gather per-VM task session results where the Veeam session exposes them.
+	$vmStats = $null
+	try {
+		$taskSessions = @($session.GetTaskSessions())
+		if ($taskSessions.Count -gt 0) {
+			$vmStats = @{
+				Success = @($taskSessions | Where-Object { $_.Status -eq 'Success' }).Count
+				Warning = @($taskSessions | Where-Object { $_.Status -eq 'Warning' }).Count
+				Failed  = @($taskSessions | Where-Object { $_.Status -eq 'Failed' }).Count
+				Total   = $taskSessions.Count
+			}
+		}
+	}
+	catch {
+		Write-LogMessage -Tag 'DEBUG' -Message "Unable to gather per-VM session results: $($_.Exception.Message)"
 	}
 
 
@@ -306,6 +323,7 @@ try {
 		Mention       = $mention
 		ThumbnailUrl  = $Config.thumbnail
 		FooterMessage = $footerMessage
+		VmStats       = $vmStats
 	}
 
 	if ($JobType -in 'EpAgentBackup', 'BackupToTape', 'FileToTape') {

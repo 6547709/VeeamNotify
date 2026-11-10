@@ -1,3 +1,67 @@
+﻿function ConvertTo-ChineseStatus {
+	[CmdletBinding()]
+	[OutputType([string])]
+	param (
+		[string]$Status
+	)
+
+	switch ($Status) {
+		'Success' { return '成功' }
+		'Warning' { return '警告' }
+		'Failed' { return '失败' }
+		'None' { return '无' }
+		default { return $Status }
+	}
+}
+
+function ConvertTo-ChineseBottleneck {
+	[CmdletBinding()]
+	[OutputType([string])]
+	param (
+		[string]$Bottleneck
+	)
+
+	if ([string]::IsNullOrWhiteSpace($Bottleneck)) {
+		return $Bottleneck
+	}
+
+	$map = @{
+		'Source'  = '源'
+		'Proxy'   = '代理'
+		'Network' = '网络'
+		'Target'  = '目标'
+	}
+
+	$parts = foreach ($part in ($Bottleneck -split ',\s*')) {
+		$trimmed = $part.Trim()
+		if ($map.ContainsKey($trimmed)) {
+			$map[$trimmed]
+		}
+		else {
+			$trimmed
+		}
+	}
+
+	return ($parts -join '、')
+}
+
+function Format-Percentage {
+	[CmdletBinding()]
+	[OutputType([string])]
+	param (
+		[string]$Value
+	)
+
+	if ([string]::IsNullOrWhiteSpace($Value)) {
+		return $Value
+	}
+	if ($Value.EndsWith('%')) {
+		return $Value
+	}
+
+	return "$Value%"
+}
+
 function New-Payload {
 	[CmdletBinding()]
 	[OutputType([PSCustomObject])]
@@ -41,6 +105,11 @@ function New-Payload {
 function New-DiscordPayload {
 	[CmdletBinding()]
 	[OutputType([PSCustomObject])]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'VmStats',
+		Justification = 'VmStats is used by other notification services'
+	)]
 	param (
 		[string]$JobName,
 		[string]$JobType,
@@ -61,7 +130,8 @@ function New-DiscordPayload {
 		[string]$FooterMessage,
 		[boolean]$NotifyUpdate,
 		[boolean]$UpdateAvailable,
-		[string]$LatestVersion
+		[string]$LatestVersion,
+		[hashtable]$VmStats
 	)
 
 	# Set Discord timestamps
@@ -223,6 +293,11 @@ function New-DiscordPayload {
 function New-TeamsPayload {
 	[CmdletBinding()]
 	[OutputType([PSCustomObject])]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'VmStats',
+		Justification = 'VmStats is used by other notification services'
+	)]
 	param (
 		[string]$JobName,
 		[string]$JobType,
@@ -244,7 +319,8 @@ function New-TeamsPayload {
 		[string]$FooterMessage,
 		[boolean]$NotifyUpdate,
 		[boolean]$UpdateAvailable,
-		[string]$LatestVersion
+		[string]$LatestVersion,
+		[hashtable]$VmStats
 	)
 
 	# Define username
@@ -500,6 +576,11 @@ function New-TeamsPayload {
 function New-SlackPayload {
 	[CmdletBinding()]
 	[OutputType([PSCustomObject])]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'VmStats',
+		Justification = 'VmStats is used by other notification services'
+	)]
 	param (
 		[string]$JobName,
 		[string]$JobType,
@@ -520,7 +601,8 @@ function New-SlackPayload {
 		[string]$FooterMessage,
 		[boolean]$NotifyUpdate,
 		[boolean]$UpdateAvailable,
-		[string]$LatestVersion
+		[string]$LatestVersion,
+		[hashtable]$VmStats
 	)
 
 	[PSCustomObject]$payload = @{
@@ -719,7 +801,8 @@ function New-WeComPayload {
 		[string]$FooterMessage,
 		[boolean]$NotifyUpdate,
 		[boolean]$UpdateAvailable,
-		[string]$LatestVersion
+		[string]$LatestVersion,
+		[hashtable]$VmStats
 	)
 
 	# Set source description colour: 3 green, 2 red, 0 grey.
@@ -729,6 +812,7 @@ function New-WeComPayload {
 		'Failed' { $statusColour = 2 }
 		default { $statusColour = 0 }
 	}
+	$statusZh = ConvertTo-ChineseStatus -Status $Status
 
 	# Set timestamps
 	$timestampStart = $(Get-Date $StartTime -UFormat '%d %B %Y %R').ToString()
@@ -738,59 +822,66 @@ function New-WeComPayload {
 	if ($JobType.EndsWith('Agent Backup') -or $JobType.EndsWith('Tape Backup')) {
 		$horizontalContentList = @(
 			[PSCustomObject]@{
-				keyname = 'Processed Size'
+				keyname = '处理大小'
 				value   = $ProcessedSize
 			},
 			[PSCustomObject]@{
-				keyname = 'Transferred Data'
+				keyname = '传输数据'
 				value   = $TransferSize
 			},
 			[PSCustomObject]@{
-				keyname = 'Processing Rate'
+				keyname = '处理速率'
 				value   = $Speed
 			},
 			[PSCustomObject]@{
-				keyname = 'Bottleneck'
-				value   = $Bottleneck
+				keyname = '瓶颈'
+				value   = (ConvertTo-ChineseBottleneck -Bottleneck $Bottleneck)
 			}
 		)
 	}
 	else {
 		$horizontalContentList = @(
 			[PSCustomObject]@{
-				keyname = 'Backup Size'
+				keyname = '备份大小'
 				value   = $DataSize
 			},
 			[PSCustomObject]@{
-				keyname = 'Transferred Data'
+				keyname = '传输数据'
 				value   = $TransferSize
 			},
 			[PSCustomObject]@{
-				keyname = 'Dedup Ratio'
-				value   = "$DedupRatio"
+				keyname = '去重率'
+				value   = (Format-Percentage -Value "$DedupRatio")
 			},
 			[PSCustomObject]@{
-				keyname = 'Compression Ratio'
-				value   = "$CompressRatio"
+				keyname = '压缩率'
+				value   = (Format-Percentage -Value "$CompressRatio")
 			},
 			[PSCustomObject]@{
-				keyname = 'Processing Rate'
+				keyname = '处理速率'
 				value   = $Speed
 			},
 			[PSCustomObject]@{
-				keyname = 'Bottleneck'
-				value   = $Bottleneck
+				keyname = '瓶颈'
+				value   = (ConvertTo-ChineseBottleneck -Bottleneck $Bottleneck)
 			}
 		)
 	}
 
 	# Build secondary text.
-	$subTitle = "Job type: $JobType`nStart Time: $timestampStart`nEnd Time: $timestampEnd`nDuration: $Duration"
+	$subTitleLines = @("作业类型：$JobType")
+	if ($null -ne $VmStats) {
+		$subTitleLines += "虚拟机结果：成功 $($VmStats.Success) / 警告 $($VmStats.Warning) / 失败 $($VmStats.Failed)"
+	}
+	$subTitleLines += "开始时间：$timestampStart"
+	$subTitleLines += "结束时间：$timestampEnd"
+	$subTitleLines += "持续时间：$Duration"
+	$subTitle = $subTitleLines -join "`n"
 
 	# Build quote area; append update notice if relevant and configured.
 	$quoteText = $FooterMessage
 	if ($UpdateAvailable -and $NotifyUpdate) {
-		$quoteText += "`nA new version of VeeamNotify is available! See release $LatestVersion on GitHub."
+		$quoteText += "`nVeeamNotify 有新版本可用！请在 GitHub 查看 release $LatestVersion。"
 		$cardActionUrl = "https://github.com/6547709/VeeamNotify/releases/$LatestVersion"
 	}
 	else {
@@ -803,18 +894,18 @@ function New-WeComPayload {
 			card_type               = 'text_notice'
 			source                  = [PSCustomObject]@{
 				icon_url   = $ThumbnailUrl
-				desc       = $Status
+				desc       = $statusZh
 				desc_color = $statusColour
 			}
 			main_title              = [PSCustomObject]@{
 				title = $JobName
-				desc  = "Session result: $Status"
+				desc  = "会话结果：$statusZh"
 			}
 			sub_title_text          = $subTitle
 			horizontal_content_list = $horizontalContentList
 			quote_area              = [PSCustomObject]@{
 				type       = 0
-				title      = 'VeeamNotify'
+				title      = 'GuoqiangLi VeeamNotify'
 				quote_text = $quoteText
 			}
 			card_action             = [PSCustomObject]@{
@@ -859,7 +950,8 @@ function New-FeishuPayload {
 		[string]$FooterMessage,
 		[boolean]$NotifyUpdate,
 		[boolean]$UpdateAvailable,
-		[string]$LatestVersion
+		[string]$LatestVersion,
+		[hashtable]$VmStats
 	)
 
 	# Set card header colour.
@@ -869,6 +961,7 @@ function New-FeishuPayload {
 		'Failed' { $template = 'red' }
 		default { $template = 'grey' }
 	}
+	$statusZh = ConvertTo-ChineseStatus -Status $Status
 
 	# Set timestamps
 	$timestampStart = $(Get-Date $StartTime -UFormat '%d %B %Y %R').ToString()
@@ -877,26 +970,26 @@ function New-FeishuPayload {
 	# Build field list.
 	if ($JobType.EndsWith('Agent Backup') -or $JobType.EndsWith('Tape Backup')) {
 		$fieldPairs = @(
-			[PSCustomObject]@{ Label = 'Processed Size'; Value = $ProcessedSize },
-			[PSCustomObject]@{ Label = 'Transferred Data'; Value = $TransferSize },
-			[PSCustomObject]@{ Label = 'Processing Rate'; Value = $Speed },
-			[PSCustomObject]@{ Label = 'Bottleneck'; Value = $Bottleneck },
-			[PSCustomObject]@{ Label = 'Start Time'; Value = $timestampStart },
-			[PSCustomObject]@{ Label = 'End Time'; Value = $timestampEnd },
-			[PSCustomObject]@{ Label = 'Duration'; Value = $Duration }
+			[PSCustomObject]@{ Label = '处理大小'; Value = $ProcessedSize },
+			[PSCustomObject]@{ Label = '传输数据'; Value = $TransferSize },
+			[PSCustomObject]@{ Label = '处理速率'; Value = $Speed },
+			[PSCustomObject]@{ Label = '瓶颈'; Value = (ConvertTo-ChineseBottleneck -Bottleneck $Bottleneck) },
+			[PSCustomObject]@{ Label = '开始时间'; Value = $timestampStart },
+			[PSCustomObject]@{ Label = '结束时间'; Value = $timestampEnd },
+			[PSCustomObject]@{ Label = '持续时间'; Value = $Duration }
 		)
 	}
 	else {
 		$fieldPairs = @(
-			[PSCustomObject]@{ Label = 'Backup Size'; Value = $DataSize },
-			[PSCustomObject]@{ Label = 'Transferred Data'; Value = $TransferSize },
-			[PSCustomObject]@{ Label = 'Dedup Ratio'; Value = $DedupRatio },
-			[PSCustomObject]@{ Label = 'Compression Ratio'; Value = $CompressRatio },
-			[PSCustomObject]@{ Label = 'Processing Rate'; Value = $Speed },
-			[PSCustomObject]@{ Label = 'Bottleneck'; Value = $Bottleneck },
-			[PSCustomObject]@{ Label = 'Start Time'; Value = $timestampStart },
-			[PSCustomObject]@{ Label = 'End Time'; Value = $timestampEnd },
-			[PSCustomObject]@{ Label = 'Duration'; Value = $Duration }
+			[PSCustomObject]@{ Label = '备份大小'; Value = $DataSize },
+			[PSCustomObject]@{ Label = '传输数据'; Value = $TransferSize },
+			[PSCustomObject]@{ Label = '去重率'; Value = (Format-Percentage -Value "$DedupRatio") },
+			[PSCustomObject]@{ Label = '压缩率'; Value = (Format-Percentage -Value "$CompressRatio") },
+			[PSCustomObject]@{ Label = '处理速率'; Value = $Speed },
+			[PSCustomObject]@{ Label = '瓶颈'; Value = (ConvertTo-ChineseBottleneck -Bottleneck $Bottleneck) },
+			[PSCustomObject]@{ Label = '开始时间'; Value = $timestampStart },
+			[PSCustomObject]@{ Label = '结束时间'; Value = $timestampEnd },
+			[PSCustomObject]@{ Label = '持续时间'; Value = $Duration }
 		)
 	}
 
@@ -914,10 +1007,15 @@ function New-FeishuPayload {
 	}
 
 	# Build body elements.
+	$summary = "**会话结果：** $statusZh`n**作业类型：** $JobType"
+	if ($null -ne $VmStats) {
+		$summary += "`n**虚拟机结果：** 成功 $($VmStats.Success) / 警告 $($VmStats.Warning) / 失败 $($VmStats.Failed)"
+	}
+
 	$elements = @(
 		[PSCustomObject]@{
 			tag     = 'markdown'
-			content = "**Session result:** $Status`n**Job type:** $JobType"
+			content = $summary
 		},
 		[PSCustomObject]@{
 			tag       = 'column_set'
@@ -956,13 +1054,13 @@ function New-FeishuPayload {
 	if ($UpdateAvailable -and $NotifyUpdate) {
 		$elements += [PSCustomObject]@{
 			tag     = 'markdown'
-			content = "**Update Available**`nA new version of VeeamNotify is available! See release $LatestVersion on GitHub."
+			content = "**有新版本**`nVeeamNotify 有新版本可用！请在 GitHub 查看 release $LatestVersion。"
 		}
 		$elements += [PSCustomObject]@{
 			tag       = 'button'
 			text      = [PSCustomObject]@{
 				tag     = 'plain_text'
-				content = 'Open on GitHub'
+				content = '在 GitHub 查看'
 			}
 			type      = 'default'
 			behaviors = @(
@@ -1014,6 +1112,11 @@ function New-TelegramPayload {
 		'ThumbnailUrl',
 		Justification = 'ThumbnailUrl is part of standard notification parameters'
 	)]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'VmStats',
+		Justification = 'VmStats is used by other notification services'
+	)]
 	param (
 		[ValidateNotNullOrEmpty()]
 		[string]$ChatId,
@@ -1036,7 +1139,8 @@ function New-TelegramPayload {
 		[string]$FooterMessage,
 		[boolean]$NotifyUpdate,
 		[boolean]$UpdateAvailable,
-		[string]$LatestVersion
+		[string]$LatestVersion,
+		[hashtable]$VmStats
 	)
 
 	function escapeTGChars {
@@ -1139,7 +1243,8 @@ function New-HttpPayload {
 		'Mention',
 		'NotifyUpdate',
 		'ThumbnailUrl',
-		'FooterMessage'
+		'FooterMessage',
+		'VmStats'
 	) | ForEach-Object { $params.Remove($_) }
 
 	return $params

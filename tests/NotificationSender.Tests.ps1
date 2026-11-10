@@ -57,6 +57,7 @@ Describe 'Send-WebhookNotification provider responses' {
 			NotifyUpdate    = $false
 			UpdateAvailable = $false
 			LatestVersion   = ''
+			VmStats         = @{ Success = 5; Warning = 1; Failed = 0; Total = 6 }
 		}
 		$script:serviceConfig = [PSCustomObject]@{ webhook = 'https://example.com/hook' }
 	}
@@ -194,6 +195,7 @@ Describe 'Send-WebhookNotification provider responses' {
 			NotifyUpdate    = $false
 			UpdateAvailable = $false
 			LatestVersion   = ''
+			VmStats         = @{ Success = 5; Warning = 1; Failed = 0; Total = 6 }
 		}
 
 		$result = InModuleScope NotificationSender -Parameters @{
@@ -228,6 +230,7 @@ Describe 'Send-WebhookNotification provider responses' {
 			NotifyUpdate    = $false
 			UpdateAvailable = $false
 			LatestVersion   = ''
+			VmStats         = @{ Success = 5; Warning = 1; Failed = 0; Total = 6 }
 		}
 
 		$result = InModuleScope NotificationSender -Parameters @{
