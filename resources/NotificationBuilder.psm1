@@ -3,7 +3,7 @@ function New-Payload {
 	[OutputType([PSCustomObject])]
 	param (
 		[Parameter(Mandatory)]
-		[ValidateSet('Discord', 'Slack', 'Teams', 'Telegram', 'HTTP')]
+		[ValidateSet('Discord', 'Slack', 'Teams', 'Telegram', 'HTTP', 'WeCom', 'Feishu')]
 		[string]$Service,
 
 		[Parameter(Mandatory)]
@@ -25,6 +25,12 @@ function New-Payload {
 		}
 		'HTTP' {
 			New-HttpPayload -Parameters $Parameters
+		}
+		'WeCom' {
+			New-WeComPayload @Parameters
+		}
+		'Feishu' {
+			New-FeishuPayload @Parameters
 		}
 		default {
 			Write-LogMessage -Tag 'ERROR' -Message "Unknown service: $Service"
@@ -682,6 +688,141 @@ function New-SlackPayload {
 	# Remove obsolete extended-type system properties added by Add-Member ($payload.blocks +=)
 	# https://stackoverflow.com/a/57599481
 	Remove-TypeData System.Array -ErrorAction Ignore
+
+	return $payload
+}
+
+function New-WeComPayload {
+	[CmdletBinding()]
+	[OutputType([PSCustomObject])]
+	[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+		'PSReviewUnusedParameter',
+		'Mention',
+		Justification = 'Mention is part of standard notification parameters'
+	)]
+	param (
+		[string]$JobName,
+		[string]$JobType,
+		[string]$Status,
+		[string]$DataSize,
+		[string]$TransferSize,
+		[string]$ProcessedSize,
+		[int]$DedupRatio,
+		[int]$CompressRatio,
+		[string]$Speed,
+		[string]$Bottleneck,
+		[string]$Duration,
+		[DateTime]$StartTime,
+		[DateTime]$EndTime,
+		[boolean]$Mention,
+		[string]$ThumbnailUrl,
+		[string]$FooterMessage,
+		[boolean]$NotifyUpdate,
+		[boolean]$UpdateAvailable,
+		[string]$LatestVersion
+	)
+
+	# Set source description colour: 3 green, 2 red, 0 grey.
+	switch ($Status) {
+		'Success' { $statusColour = 3 }
+		'Warning' { $statusColour = 2 }
+		'Failed' { $statusColour = 2 }
+		default { $statusColour = 0 }
+	}
+
+	# Set timestamps
+	$timestampStart = $(Get-Date $StartTime -UFormat '%d %B %Y %R').ToString()
+	$timestampEnd = $(Get-Date $EndTime -UFormat '%d %B %Y %R').ToString()
+
+	# Build horizontal content list.
+	if ($JobType.EndsWith('Agent Backup') -or $JobType.EndsWith('Tape Backup')) {
+		$horizontalContentList = @(
+			[PSCustomObject]@{
+				keyname = 'Processed Size'
+				value   = $ProcessedSize
+			},
+			[PSCustomObject]@{
+				keyname = 'Transferred Data'
+				value   = $TransferSize
+			},
+			[PSCustomObject]@{
+				keyname = 'Processing Rate'
+				value   = $Speed
+			},
+			[PSCustomObject]@{
+				keyname = 'Bottleneck'
+				value   = $Bottleneck
+			}
+		)
+	}
+	else {
+		$horizontalContentList = @(
+			[PSCustomObject]@{
+				keyname = 'Backup Size'
+				value   = $DataSize
+			},
+			[PSCustomObject]@{
+				keyname = 'Transferred Data'
+				value   = $TransferSize
+			},
+			[PSCustomObject]@{
+				keyname = 'Dedup Ratio'
+				value   = $DedupRatio
+			},
+			[PSCustomObject]@{
+				keyname = 'Compression Ratio'
+				value   = $CompressRatio
+			},
+			[PSCustomObject]@{
+				keyname = 'Processing Rate'
+				value   = $Speed
+			},
+			[PSCustomObject]@{
+				keyname = 'Bottleneck'
+				value   = $Bottleneck
+			}
+		)
+	}
+
+	# Build secondary text.
+	$subTitle = "Job type: $JobType`nStart Time: $timestampStart`nEnd Time: $timestampEnd`nDuration: $Duration"
+
+	# Build quote area; append update notice if relevant and configured.
+	$quoteText = $FooterMessage
+	if ($UpdateAvailable -and $NotifyUpdate) {
+		$quoteText += "`nA new version of VeeamNotify is available! See release $LatestVersion on GitHub."
+		$cardActionUrl = "https://github.com/6547709/VeeamNotify/releases/$LatestVersion"
+	}
+	else {
+		$cardActionUrl = 'https://github.com/6547709/VeeamNotify'
+	}
+
+	[PSCustomObject]$payload = @{
+		msgtype       = 'template_card'
+		template_card = [PSCustomObject]@{
+			card_type               = 'text_notice'
+			source                  = [PSCustomObject]@{
+				icon_url   = $ThumbnailUrl
+				desc       = $Status
+				desc_color = $statusColour
+			}
+			main_title              = [PSCustomObject]@{
+				title = $JobName
+				desc  = "Session result: $Status"
+			}
+			sub_title_text          = $subTitle
+			horizontal_content_list = $horizontalContentList
+			quote_area              = [PSCustomObject]@{
+				type       = 0
+				title      = 'VeeamNotify'
+				quote_text = $quoteText
+			}
+			card_action             = [PSCustomObject]@{
+				type = 1
+				url  = $cardActionUrl
+			}
+		}
+	}
 
 	return $payload
 }
