@@ -36,7 +36,7 @@
 	.NOTES
 	Authors: tigattack, philenst
 	.LINK
-	https://github.com/tigattack/VeeamNotify/wiki
+	https://github.com/6547709/VeeamNotify
 #>
 
 #Requires -RunAsAdministrator

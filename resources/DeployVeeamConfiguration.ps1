@@ -21,7 +21,7 @@ function Write-StatusMessage {
 
 # Function to be used when an error is encountered
 function DeploymentError {
-	$issues = 'https://github.com/tigattack/VeeamNotify/issues'
+	$issues = 'https://github.com/6547709/VeeamNotify/issues'
 
 	Write-StatusMessage -Status 'Error' -Message "An error occured $($_.ScriptStackTrace.Split("`n")[0]): $($_.Exception.Message)"
 	Write-StatusMessage -Message "`nPlease raise an issue at $issues"
